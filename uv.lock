@@ -502,14 +502,12 @@ name = "dbbackup-flow"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
-    { name = "docker" },
     { name = "prefect" },
     { name = "prefect-kubernetes" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "docker", specifier = ">=7.0.0" },
     { name = "prefect", specifier = ">=3.6.10" },
     { name = "prefect-kubernetes", specifier = ">=0.7.2" },
 ]

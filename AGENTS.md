@@ -115,13 +115,18 @@ just trigger pg-s3-backup
 ### File Structure
 ```
 .
-├── main.py           # Flow definition
-├── pyproject.toml    # Project metadata & deps
-├── prefect.yaml      # Prefect deployment config
-├── justfile          # Automation commands
+├── main.py                       # Entry point (imports from dbbackup_flow)
+├── pyproject.toml                # Project metadata & deps
+├── prefect.yaml                  # Prefect deployment config
+├── justfile                      # Automation commands
 ├── .gitignore
-├── AGENTS.md         # This file
-└── README.md         # User documentation
+├── AGENTS.md                     # This file
+├── README.md                     # User documentation
+└── dbbackup_flow/                # Root package
+    ├── __init__.py
+    └── flows/
+        ├── __init__.py
+        └── pg_s3_backup.py       # Main backup flow
 ```
 
 ## Quick Reference

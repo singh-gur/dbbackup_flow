@@ -1,11 +1,10 @@
 [project]
 name = "dbbackup-flow"
 version = "0.1.0"
-description = "Add your description here"
+description = "Prefect flow for PostgreSQL backup to S3 using Kubernetes"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = [
-    "prefect>=3.6.10",
-    "docker>=7.0.0",
-    "prefect-kubernetes>=0.7.2",
-]
+dependencies = ["prefect>=3.6.10", "prefect-kubernetes>=0.7.2"]
+
+[tool.setuptools.packages.find]
+where = ["."]

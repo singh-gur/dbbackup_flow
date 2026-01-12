@@ -1,33 +1,33 @@
 # Prefect Deployment Commands
 # Use: just <task>
 
-# Deploy all deployments to prod profile
+# Deploy all deployments
 deploy:
-    prefect deploy --all --prod
+    prefect deploy --all
 
 # Deploy with specific entrypoint
 deploy-flow:
-    prefect deploy main.py:run_pg_backup --name pg-s3-backup --prod
+    prefect deploy dbbackup_flow/flows/pg_s3_backup.py:run_pg_backup --name pg-s3-backup -p kubernetes
 
 # Deploy with schedule (daily at 2am)
 deploy-scheduled:
-    prefect deploy main.py:run_pg_backup --name pg-s3-backup --prod --cron "0 2 * * *"
+    prefect deploy dbbackup_flow/flows/pg_s3_backup.py:run_pg_backup --name pg-s3-backup --cron "0 2 * * *" -p kubernetes
 
 # Run a deployment immediately (ad-hoc run)
 run DEPLOYMENT_NAME:
-    prefect deployment run {{ DEPLOYMENT_NAME }} --prod
+    prefect deployment run '{{ DEPLOYMENT_NAME }}'
 
 # View deployed deployments
 list-deployments:
-    prefect deployment ls --prod
+    prefect deployment ls
 
 # View deployment details
 info DEPLOYMENT_NAME:
-    prefect deployment info {{ DEPLOYMENT_NAME }} --prod
+    prefect deployment info '{{ DEPLOYMENT_NAME }}'
 
 # Trigger a deployment
 trigger DEPLOYMENT_NAME:
-    prefect deployment run '{{ DEPLOYMENT_NAME }}' --prod
+    prefect deployment run '{{ DEPLOYMENT_NAME }}'
 
 # Install project dependencies
 install:
@@ -41,7 +41,7 @@ register-blocks:
 
 # Usage: just set-var pg_backup_bucket my-bucket
 set-var name value:
-    prefect variable set "{{ name }}" "{{ value }}" --prod
+    prefect variable set "{{ name }}" "{{ value }}"
 
 # Set a Secret block (sensitive)
 
@@ -53,7 +53,7 @@ set-secret name value:
 
 # List Prefect variables
 list-vars:
-    prefect variable ls --prod
+    prefect variable ls
 
 # Show Prefect version and status
 status:
