@@ -15,9 +15,8 @@ push: null
 # pull section allows you to provide instructions for cloning this project in remote locations
 pull:
   - prefect.deployments.steps.git_clone:
-      repository: "{{ repository }}"
-      branch: "{{ branch }}"
-      access_token: null
+      repository: "{{ prefect.blocks.github-repository.dbbackup-flow }}"
+      branch: "main"
 
 # the deployments section allows you to provide configuration for deploying flows
 deployments:

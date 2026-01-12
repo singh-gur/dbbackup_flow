@@ -55,6 +55,10 @@ set-secret name value:
 list-vars:
     prefect variable ls
 
+# List Prefect secrets
+list-secrets:
+    prefect block ls
+
 # Show Prefect version and status
 status:
     prefect version && prefect profile ls
