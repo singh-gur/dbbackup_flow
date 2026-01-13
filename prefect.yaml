@@ -30,7 +30,7 @@ pull:
 # the deployments section allows you to provide configuration for deploying flows
 deployments:
   - name: dbbackup_flow
-    version: null
+    version: 0.0.1
     tags: []
     description: "DBBackup runs a container image to backup PostgreSQL databases to S3."
     schedule:
