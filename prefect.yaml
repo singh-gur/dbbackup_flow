@@ -19,13 +19,7 @@ pull:
       branch: "main"
       access_token: "{{ prefect.blocks.github-credentials.github-pat.token }}"
   - prefect.deployments.steps.run_shell_script:
-      script: |
-        pwd
-        ls -la
-        find . -name requirements.txt
-      stream_output: true
-  - prefect.deployments.steps.pip_install_requirements:
-      requirements_file: "requirements.txt"
+      script: pip install prefect-kubernetes==0.7.2
       stream_output: true
 
 # the deployments section allows you to provide configuration for deploying flows
