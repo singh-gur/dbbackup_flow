@@ -30,7 +30,7 @@ deployments:
     entrypoint: dbbackup_flow.run_pg_backup
     parameters: {}
     pip_install_requirements:
-      requirements_file: requirements.txt
+      install_command: "pip install -e ."
     work_pool:
       name: kubernetes
       work_queue_name: null
