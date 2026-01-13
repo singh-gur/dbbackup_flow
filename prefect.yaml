@@ -20,12 +20,13 @@ pull:
       access_token: "{{ prefect.blocks.github-credentials.github-pat.token }}"
   - prefect.deployments.steps.run_shell_script:
       script: |
-        ls -la "{{ pull_step_1.directory }}"
-        find "{{ pull_step_1.directory }}" -name requirements.txt
+        pwd
+        ls -la
+        find . -name requirements.txt
       stream_output: true
   - prefect.deployments.steps.pip_install_requirements:
-      requirements_file: "{{ pull_step_1.directory }}/dbbackup_flow/requirements.txt"
-      stream_output: false
+      requirements_file: "requirements.txt"
+      stream_output: true
 
 # the deployments section allows you to provide configuration for deploying flows
 deployments:
