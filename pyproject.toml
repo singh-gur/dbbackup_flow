@@ -5,7 +5,6 @@ description = "Prefect flow for PostgreSQL backup to S3 using Kubernetes"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
- "prefect>=3.6.10",
  "prefect-kubernetes>=0.7.2",
 ]
 
@@ -16,5 +15,6 @@ build-backend = "hatchling.build"
 [dependency-groups]
 dev = [
     "basedpyright>=1.37.1",
+    "prefect>=3.6.10",
     "ruff>=0.14.11",
 ]

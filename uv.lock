@@ -514,25 +514,23 @@ name = "dbbackup-flow"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
-    { name = "prefect" },
     { name = "prefect-kubernetes" },
 ]
 
 [package.dev-dependencies]
 dev = [
     { name = "basedpyright" },
+    { name = "prefect" },
     { name = "ruff" },
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "prefect", specifier = ">=3.6.10" },
-    { name = "prefect-kubernetes", specifier = ">=0.7.2" },
-]
+requires-dist = [{ name = "prefect-kubernetes", specifier = ">=0.7.2" }]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "basedpyright", specifier = ">=1.37.1" },
+    { name = "prefect", specifier = ">=3.6.10" },
     { name = "ruff", specifier = ">=0.14.11" },
 ]
 
