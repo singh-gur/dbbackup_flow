@@ -97,7 +97,7 @@ def run_pg_backup(
     aws_access_key_block = Secret.load("aws-access-key")
     aws_access_key = aws_access_key_block.get()
 
-    aws_secret_block = ecret.load("aws-secret-key")
+    aws_secret_block = Secret.load("aws-secret-key")
     aws_secret = aws_secret_block.get()
 
     # Build command arguments

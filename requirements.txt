@@ -1,1 +1,2 @@
+prefect==3.6.10
 prefect-kubernetes==0.7.2
