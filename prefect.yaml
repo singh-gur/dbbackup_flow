@@ -32,6 +32,6 @@ deployments:
     pip_install_requirements:
       requirements_file: requirements.txt
     work_pool:
-      name: null
+      name: kubernetes
       work_queue_name: null
       job_variables: {}
