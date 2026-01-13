@@ -512,7 +512,7 @@ wheels = [
 [[package]]
 name = "dbbackup-flow"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "prefect" },
     { name = "prefect-kubernetes" },
