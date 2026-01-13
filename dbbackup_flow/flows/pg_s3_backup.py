@@ -4,8 +4,25 @@ from typing import Any
 
 from prefect import flow, get_run_logger
 from prefect.blocks.system import Secret
+from prefect.exceptions import ObjectNotFound
+from prefect.runtime import flow_run
 from prefect.variables import Variable
+from prefect_kubernetes.credentials import KubernetesCredentials
 from prefect_kubernetes.jobs import KubernetesJob
+
+
+def load_secret_value(name: str) -> str:
+    """Load a Prefect Secret block value."""
+    try:
+        secret_block = Secret.load(name)
+    except ObjectNotFound as exc:
+        raise ObjectNotFound(
+            Exception(
+                f"Prefect Secret block '{name}' not found. Create it before running the flow."
+            )
+        ) from exc
+
+    return secret_block.get()
 
 
 @flow(
@@ -15,6 +32,7 @@ from prefect_kubernetes.jobs import KubernetesJob
 def run_pg_backup(
     # Kubernetes options
     namespace: str = "default",
+    kubernetes_credentials: KubernetesCredentials | None = None,
     # Docker image
     image: str = "regv2.gsingh.io/personal/pg-s3-backup:latest",
     image_pull_policy: str = "Always",
@@ -34,6 +52,7 @@ def run_pg_backup(
     # Other options
     compress: bool = False,
     keep_local: bool = False,
+    include_logs: bool = True,
     # Job options
     backoff_limit: int = 4,
     ttl_seconds_after_finished: int = 300,
@@ -74,6 +93,7 @@ def run_pg_backup(
         aws_endpoint_url: Custom AWS endpoint URL (for S3-compatible services)
         compress: Enable gzip compression (default: False)
         keep_local: Keep local backup file after upload (default: False)
+        include_logs: Include job logs in response (default: True)
         backoff_limit: Job backoff limit (default: 4)
         ttl_seconds_after_finished: Job TTL seconds after finished (default: 300)
 
@@ -91,14 +111,9 @@ def run_pg_backup(
     aws_region = Variable.get(name="pg_backup_aws_region", default=aws_region)
 
     # Get secrets from Prefect Secret blocks
-    password_block = Secret.load("pg-password")
-    password = password_block.get()
-
-    aws_access_key_block = Secret.load("aws-access-key")
-    aws_access_key = aws_access_key_block.get()
-
-    aws_secret_block = Secret.load("aws-secret-key")
-    aws_secret = aws_secret_block.get()
+    password = load_secret_value("pg-password")
+    aws_access_key = load_secret_value("aws-access-key")
+    aws_secret = load_secret_value("aws-secret-key")
 
     # Build command arguments
     cmd = [
@@ -140,12 +155,16 @@ def run_pg_backup(
         {"name": "AWS_SECRET_ACCESS_KEY", "value": aws_secret},
     ]
 
+    flow_run_id = flow_run.id
+    job_suffix = flow_run_id[:8] if flow_run_id else "manual"
+    job_name = f"pg-s3-backup-{job_suffix}"
+
     # Build Kubernetes Job manifest
     job_manifest = {
         "apiVersion": "batch/v1",
         "kind": "Job",
         "metadata": {
-            "name": "pg-s3-backup",
+            "name": job_name,
             "labels": {
                 "app": "pg-s3-backup",
                 "prefect-flow": "pg-s3-backup",
@@ -178,18 +197,22 @@ def run_pg_backup(
     job = KubernetesJob(
         v1_job=job_manifest,
         namespace=namespace,
+        kubernetes_credentials=kubernetes_credentials,
         delete_after_completion=True,
         timeout_seconds=600,
     )
 
     job_run = job.trigger()
     result = job_run.wait_for_completion()
-    logs = job_run.fetch_result()
+    logs = job_run.fetch_result() if include_logs else None
 
     logger.info("Backup completed successfully")
-    return {
+    response = {
         "success": result,
         "bucket": bucket,
         "prefix": prefix,
-        "logs": logs,
     }
+    if include_logs:
+        response["logs"] = logs
+
+    return response

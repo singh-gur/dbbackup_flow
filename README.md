@@ -24,9 +24,9 @@ export PG_PASSWORD="your-password"
 export AWS_ACCESS_KEY_ID="your-access-key"
 export AWS_SECRET_ACCESS_KEY="your-secret-key"
 
-just set-secret PG_PASSWORD
-just set-secret AWS_ACCESS_KEY_ID
-just set-secret AWS_SECRET_ACCESS_KEY
+just set-secret pg-password "$PG_PASSWORD"
+just set-secret aws-access-key "$AWS_ACCESS_KEY_ID"
+just set-secret aws-secret-key "$AWS_SECRET_ACCESS_KEY"
 ```
 
 ## Deploy
@@ -40,8 +40,7 @@ just deploy-scheduled  # Deploy with daily 2am schedule
 | Command | Description |
 |---------|-------------|
 | `just set-var name value` | Set a Prefect variable |
-| `just set-secret name` | Set a secret (reads from `$name` env var) |
-| `just set-secrets` | Set all required secrets |
+| `just set-secret name value` | Set a Prefect Secret block |
 | `just list-vars` | List all variables |
 | `just deploy-scheduled` | Deploy with schedule |
 | `just status` | Show Prefect status |
