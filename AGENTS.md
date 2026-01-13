@@ -95,6 +95,9 @@ just trigger pg-s3-backup
 - Build job manifests as dicts, pass to `KubernetesJob`
 - Always set `delete_after_completion=True` for cleanup
 - Use `job_run.wait_for_completion()` before fetching results
+- **IMPORTANT**: For Kubernetes work pools, specify dependencies in `job_variables.packages` (prefect.yaml), NOT `pip_install_requirements`
+  - Example: `job_variables: {packages: ["prefect-kubernetes==0.7.2"]}`
+  - The `pip_install_requirements` step does NOT work with Kubernetes work pools
 
 ### Secrets Management
 - Store sensitive data in **Prefect Secret Blocks** (`Secret.load("name").get()`)

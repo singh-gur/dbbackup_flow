@@ -29,9 +29,9 @@ deployments:
     flow_name: pg_s3_backup
     entrypoint: dbbackup_flow.flows.pg_s3_backup:run_pg_backup
     parameters: {}
-    pip_install_requirements:
-      requirements_file: requirements.txt
     work_pool:
       name: kubernetes
       work_queue_name: null
-      job_variables: {}
+      job_variables:
+        # Specify packages to install in the worker pod
+        packages: ["prefect-kubernetes==0.7.2"]
