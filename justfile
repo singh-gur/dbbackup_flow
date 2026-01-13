@@ -37,6 +37,10 @@ install:
 reqs:
     uv pip compile pyproject.toml --no-deps --no-annotate --no-header > requirements.txt
 
+# Run flow locally for testing
+run-local FLOW_NAME:
+    .venv/bin/python -c "from dbbackup_flow import {{ FLOW_NAME }}; {{ FLOW_NAME }}()"
+
 # Register prefect-kubernetes blocks
 register-blocks:
     prefect block register -m prefect_kubernetes

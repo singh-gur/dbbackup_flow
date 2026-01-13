@@ -1,21 +1,20 @@
 """pg-s3-backup flow for PostgreSQL backup to S3 using Kubernetes Job."""
 
-from prefect import flow, get_run_logger
-from prefect.variables import Variable
-from prefect.blocks.system import Secret
-from prefect_kubernetes.credentials import KubernetesCredentials
-from prefect_kubernetes.jobs import KubernetesJob
 from typing import Any
+
+from prefect import flow, get_run_logger
+from prefect.blocks.system import Secret
+from prefect.variables import Variable
+from prefect_kubernetes.jobs import KubernetesJob
 
 
 @flow(
     name="pg-s3-backup",
     description="Run pg-s3-backup Docker container as Kubernetes Job to backup PostgreSQL to S3",
 )
-async def run_pg_backup(
+def run_pg_backup(
     # Kubernetes options
     namespace: str = "default",
-    kubernetes_credentials: str | None = None,
     # Docker image
     image: str = "regv2.gsingh.io/personal/pg-s3-backup:latest",
     image_pull_policy: str = "Always",
@@ -92,24 +91,31 @@ async def run_pg_backup(
     aws_region = Variable.get(name="pg_backup_aws_region", default=aws_region)
 
     # Get secrets from Prefect Secret blocks
-    password_block = await Secret.load("pg-password")
+    password_block = Secret.load("pg-password")
     password = password_block.get()
 
-    aws_access_key_block = await Secret.load("aws-access-key")
+    aws_access_key_block = Secret.load("aws-access-key")
     aws_access_key = aws_access_key_block.get()
 
-    aws_secret_block = await Secret.load("aws-secret-key")
+    aws_secret_block = ecret.load("aws-secret-key")
     aws_secret = aws_secret_block.get()
 
     # Build command arguments
     cmd = [
-        "--host", host,
-        "--port", str(port),
-        "--dbname", dbname,
-        "--user", user,
-        "--bucket", bucket,
-        "--aws-profile", aws_profile,
-        "--aws-region", aws_region,
+        "--host",
+        host,
+        "--port",
+        str(port),
+        "--dbname",
+        dbname,
+        "--user",
+        user,
+        "--bucket",
+        bucket,
+        "--aws-profile",
+        aws_profile,
+        "--aws-region",
+        aws_region,
     ]
 
     if backup_all:
@@ -168,16 +174,9 @@ async def run_pg_backup(
 
     logger.info(f"Starting PostgreSQL backup to S3: {bucket}/{prefix}")
 
-    # Load credentials if provided, otherwise use in-cluster config
-    if kubernetes_credentials:
-        creds = KubernetesCredentials.load(kubernetes_credentials)
-    else:
-        creds = KubernetesCredentials()
-
     # Create and run the job
     job = KubernetesJob(
         v1_job=job_manifest,
-        credentials=creds,
         namespace=namespace,
         delete_after_completion=True,
         timeout_seconds=600,
