@@ -29,6 +29,8 @@ deployments:
     flow_name: null
     entrypoint: null
     parameters: {}
+    pip_install_requirements:
+      requirements_file: requirements.txt
     work_pool:
       name: null
       work_queue_name: null

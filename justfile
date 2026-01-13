@@ -3,15 +3,15 @@
 
 # Deploy all deployments
 deploy:
-    prefect deploy --all
+    just reqs && prefect deploy --all
 
 # Deploy with specific entrypoint
 deploy-flow:
-    prefect deploy dbbackup_flow/flows/pg_s3_backup.py:run_pg_backup --name pg-s3-backup -p kubernetes
+    just reqs && prefect deploy dbbackup_flow/flows/pg_s3_backup.py:run_pg_backup --name pg-s3-backup -p kubernetes
 
 # Deploy with schedule (daily at 2am)
 deploy-scheduled:
-    prefect deploy dbbackup_flow/flows/pg_s3_backup.py:run_pg_backup --name pg-s3-backup --cron "0 2 * * *" -p kubernetes
+    just reqs && prefect deploy dbbackup_flow/flows/pg_s3_backup.py:run_pg_backup --name pg-s3-backup --cron "0 2 * * *" -p kubernetes
 
 # Run a deployment immediately (ad-hoc run)
 run DEPLOYMENT_NAME:
@@ -32,6 +32,10 @@ trigger DEPLOYMENT_NAME:
 # Install project dependencies
 install:
     uv sync
+
+# Generate requirements.txt (top-level deps only, no transitive deps, no annotations)
+reqs:
+    uv pip compile pyproject.toml --no-deps --no-annotate --no-header > requirements.txt
 
 # Register prefect-kubernetes blocks
 register-blocks:
