@@ -27,7 +27,7 @@ deployments:
     description: "DBBackup runs a container image to backup PostgreSQL databases to S3."
     schedule: {}
     flow_name: pg_s3_backup
-    entrypoint: dbbackup_flow.run_pg_backup
+    entrypoint: dbbackup_flow.flows.pg_s3_backup:run_pg_backup
     parameters: {}
     pip_install_requirements:
       install_command: "pip install -e ."
