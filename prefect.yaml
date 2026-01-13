@@ -19,7 +19,7 @@ pull:
       branch: "main"
       access_token: "{{ prefect.blocks.github-credentials.github-pat.token }}"
   - prefect.deployments.steps.pip_install_requirements:
-      requirements_file: "requirements.txt"
+      requirements_file: "{{ pull_step_1.directory }}/requirements.txt"
       stream_output: false
 
 # the deployments section allows you to provide configuration for deploying flows
