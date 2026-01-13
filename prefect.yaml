@@ -21,13 +21,13 @@ pull:
 
 # the deployments section allows you to provide configuration for deploying flows
 deployments:
-  - name: null
+  - name: dbbackup_flow
     version: null
     tags: []
-    description: null
+    description: "DBBackup runs a container image to backup PostgreSQL databases to S3."
     schedule: {}
-    flow_name: null
-    entrypoint: null
+    flow_name: pg_s3_backup
+    entrypoint: dbbackup_flow.run_pg_backup
     parameters: {}
     pip_install_requirements:
       requirements_file: requirements.txt
