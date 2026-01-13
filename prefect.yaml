@@ -18,6 +18,9 @@ pull:
       repository: "https://github.com/singh-gur/dbbackup_flow.git"
       branch: "main"
       access_token: "{{ prefect.blocks.github-credentials.github-pat.token }}"
+  - prefect.deployments.steps.run_shell_script:
+      script: "ls -la {{ pull_step_1.directory }} && find {{ pull_step_1.directory }} -name requirements.txt"
+      stream_output: true
   - prefect.deployments.steps.pip_install_requirements:
       requirements_file: "{{ pull_step_1.directory }}/dbbackup_flow/requirements.txt"
       stream_output: false
