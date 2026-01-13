@@ -19,12 +19,12 @@ pull:
       repository: "https://github.com/singh-gur/dbbackup_flow.git"
       branch: "main"
       access_token: "{{ prefect.blocks.github-credentials.github-pat.token }}"
-  - prefect.deployments.steps.run_shell_script:
-      script: echo "{{ clone_step.directory }}"
-      stream_output: true
-  - prefect.deployments.steps.run_shell_script:
-      script: pip install prefect-kubernetes==0.7.2
-      stream_output: true
+  - prefect.deployments.steps.pip_install_requirements:
+      id: install_requirements_step
+      requirements_file: "{{ clone_step.directory }}/requirements.txt"
+  # - prefect.deployments.steps.run_shell_script:
+  #     script: pip install prefect-kubernetes==0.7.2
+  #     stream_output: true
 
 # the deployments section allows you to provide configuration for deploying flows
 deployments:
