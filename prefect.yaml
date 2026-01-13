@@ -18,6 +18,9 @@ pull:
       repository: "https://github.com/singh-gur/dbbackup_flow.git"
       branch: "main"
       access_token: "{{ prefect.blocks.github-credentials.github-pat.token }}"
+  - prefect.deployments.steps.pip_install_requirements:
+      requirements: "requirements.txt"
+      stream_output: false
 
 # the deployments section allows you to provide configuration for deploying flows
 deployments:
@@ -25,13 +28,13 @@ deployments:
     version: null
     tags: []
     description: "DBBackup runs a container image to backup PostgreSQL databases to S3."
-    schedule: {}
+    schedule:
+      cron: "0 4 * * *"
+      timezone: "America/New_York"
     flow_name: pg_s3_backup
     entrypoint: dbbackup_flow.flows.pg_s3_backup:run_pg_backup
     parameters: {}
     work_pool:
       name: kubernetes
       work_queue_name: null
-      job_variables:
-        # Specify packages to install in the worker pod
-        packages: ["prefect-kubernetes==0.7.2"]
+      job_variables: {}
