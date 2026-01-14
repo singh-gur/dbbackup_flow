@@ -19,13 +19,13 @@ pull:
       repository: "https://github.com/singh-gur/dbbackup_flow.git"
       branch: "main"
       access_token: "{{ prefect.blocks.github-credentials.github-ro.token }}"
-  # - prefect.deployments.steps.pip_install_requirements:
-  #     id: install_requirements_step
-  #     requirements_file: "{{ clone_step.directory }}/requirements.txt"
-  - prefect.deployments.steps.run_shell_script:
+  - prefect.deployments.steps.pip_install_requirements:
       id: install_requirements_step
-      script: "pip install {{ clone_step.directory }}/."
-      stream_output: true
+      requirements_file: "{{ clone_step.directory }}/requirements.txt"
+  # - prefect.deployments.steps.run_shell_script:
+  #     id: install_requirements_step
+  #     script: "pip install {{ clone_step.directory }}/."
+  #     stream_output: true
 
 # the deployments section allows you to provide configuration for deploying flows
 deployments:
