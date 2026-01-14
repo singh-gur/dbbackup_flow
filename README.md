@@ -30,6 +30,7 @@ just set-var pg_backup_host db.example.com
 just set-var pg_backup_dbname mydb
 just set-var pg_backup_user postgres
 just set-var pg_backup_aws_region us-east-1
+just set-var pg_backup_aws_endpoint_url https://s3.custom.com  # Optional: for S3-compatible services
 ```
 
 #### Set Secret Blocks (sensitive)

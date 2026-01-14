@@ -29,6 +29,7 @@ VAR_HOST = "pg_backup_host"
 VAR_DBNAME = "pg_backup_dbname"
 VAR_USER = "pg_backup_user"
 VAR_AWS_REGION = "pg_backup_aws_region"
+VAR_AWS_ENDPOINT_URL = "pg_backup_aws_endpoint_url"
 
 
 def load_secret_value(name: str) -> str:
@@ -139,6 +140,7 @@ def build_env_vars(
     pg_password: str,
     aws_access_key: str,
     aws_secret_key: str,
+    aws_endpoint_url: str | None = None,
 ) -> list[dict[str, str]]:
     """Build environment variables for the container.
 
@@ -146,15 +148,21 @@ def build_env_vars(
         pg_password: PostgreSQL password
         aws_access_key: AWS access key ID
         aws_secret_key: AWS secret access key
+        aws_endpoint_url: Custom AWS endpoint URL (optional)
 
     Returns:
         List of environment variable dicts
     """
-    return [
+    env_vars = [
         {"name": "PGPASSWORD", "value": pg_password},
         {"name": "AWS_ACCESS_KEY_ID", "value": aws_access_key},
         {"name": "AWS_SECRET_ACCESS_KEY", "value": aws_secret_key},
     ]
+
+    if aws_endpoint_url:
+        env_vars.append({"name": "AWS_ENDPOINT_URL", "value": aws_endpoint_url})
+
+    return env_vars
 
 
 def build_job_manifest(
@@ -255,6 +263,7 @@ def run_pg_backup(
         prefect variable set pg_backup_dbname "mydb" --prod
         prefect variable set pg_backup_user "postgres" --prod
         prefect variable set pg_backup_aws_region "us-east-1" --prod
+        prefect variable set pg_backup_aws_endpoint_url "https://s3.custom.com" --prod
 
         # Sensitive Secrets (create via Prefect UI or CLI):
         from prefect.blocks.system import Secret
@@ -296,6 +305,7 @@ def run_pg_backup(
     dbname = load_config_value(VAR_DBNAME, dbname)
     user = load_config_value(VAR_USER, user)
     aws_region = load_config_value(VAR_AWS_REGION, aws_region)
+    aws_endpoint_url = load_config_value(VAR_AWS_ENDPOINT_URL, aws_endpoint_url)
 
     # Load secrets from Prefect Secret blocks
     pg_password = load_secret_value(SECRET_PG_PASSWORD)
@@ -323,6 +333,7 @@ def run_pg_backup(
         pg_password=pg_password,
         aws_access_key=aws_access_key,
         aws_secret_key=aws_secret_key,
+        aws_endpoint_url=aws_endpoint_url,
     )
 
     # Generate unique job name

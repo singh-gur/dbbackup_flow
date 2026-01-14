@@ -41,6 +41,9 @@ S3_PREFIX=${S3_PREFIX:-}
 read -p "AWS Region [us-east-1]: " AWS_REGION
 AWS_REGION=${AWS_REGION:-us-east-1}
 
+read -p "AWS Endpoint URL (optional, for S3-compatible services) []: " AWS_ENDPOINT_URL
+AWS_ENDPOINT_URL=${AWS_ENDPOINT_URL:-}
+
 echo ""
 echo "Setting variables..."
 
@@ -50,6 +53,10 @@ just set-var pg_backup_user "$PG_USER"
 just set-var pg_backup_bucket "$S3_BUCKET"
 just set-var pg_backup_prefix "$S3_PREFIX"
 just set-var pg_backup_aws_region "$AWS_REGION"
+
+if [ -n "$AWS_ENDPOINT_URL" ]; then
+    just set-var pg_backup_aws_endpoint_url "$AWS_ENDPOINT_URL"
+fi
 
 echo ""
 echo "✅ Variables set successfully"
