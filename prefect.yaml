@@ -41,6 +41,7 @@ deployments:
     parameters:
       namespace: "prefect" # Run jobs in the same namespace as the worker
       image_pull_secret: "regv2-secret" # Name of your image pull secret
+      backup_all: true
     work_pool:
       name: kubernetes
       work_queue_name: null
