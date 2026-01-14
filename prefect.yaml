@@ -44,6 +44,7 @@ deployments:
       name: kubernetes
       work_queue_name: null
       job_variables:
+        namespace: prefect
         packages:
           - "prefect-kubernetes==0.7.2"
         service_account_name: prefect-worker
