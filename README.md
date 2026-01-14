@@ -2,6 +2,23 @@
 
 Prefect flow that runs pg-s3-backup as a Kubernetes Job.
 
+## Prerequisites
+
+### Kubernetes RBAC Setup
+
+Before running the flow, you need to apply the Kubernetes RBAC manifests to grant the Prefect worker permissions to create and manage Jobs:
+
+```bash
+kubectl apply -f k8s/rbac.yaml
+```
+
+This creates:
+- ServiceAccount: `prefect-worker`
+- Role: `prefect-worker-role` (permissions to manage Jobs and Pods)
+- RoleBinding: `prefect-worker-rolebinding`
+
+See [k8s/README.md](k8s/README.md) for detailed documentation.
+
 ## Configuration
 
 ### Quick Setup

@@ -44,3 +44,4 @@ deployments:
       job_variables:
         packages:
           - "prefect-kubernetes==0.7.2"
+        service_account_name: prefect-worker
