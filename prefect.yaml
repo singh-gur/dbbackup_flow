@@ -18,7 +18,7 @@ pull:
       id: clone_step
       repository: "https://github.com/singh-gur/dbbackup_flow.git"
       branch: "main"
-      access_token: "{{ prefect.blocks.github-credentials.github-pat.token }}"
+      access_token: "{{ prefect.blocks.github-credentials.github-ro.token }}"
   - prefect.deployments.steps.pip_install_requirements:
       id: install_requirements_step
       requirements_file: "{{ clone_step.directory }}/requirements.txt"
