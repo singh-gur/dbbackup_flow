@@ -226,7 +226,7 @@ def build_job_manifest(
 )
 def run_pg_backup(
     # Kubernetes options
-    namespace: str = "default",
+    namespace: str = "prefect",
     kubernetes_credentials: KubernetesCredentials | None = None,
     # Docker image
     image: str = "regv2.gsingh.io/personal/pg-s3-backup:latest",
