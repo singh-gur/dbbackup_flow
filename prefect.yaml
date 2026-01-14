@@ -37,7 +37,7 @@ deployments:
       cron: "0 4 * * *"
       timezone: "America/New_York"
     flow_name: pg_s3_backup
-    entrypoint: dbbackup_flow.pg_s3_backup:run_pg_backup
+    entrypoint: dbbackup_flow.flows.pg_s3_backup:run_pg_backup
     parameters:
       namespace: "prefect" # Run jobs in the same namespace as the worker
     work_pool:
