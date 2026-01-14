@@ -41,4 +41,6 @@ deployments:
     work_pool:
       name: kubernetes
       work_queue_name: null
-      job_variables: {}
+      job_variables:
+        packages:
+          - "prefect-kubernetes==0.7.2"

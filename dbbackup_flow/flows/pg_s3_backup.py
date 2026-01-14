@@ -354,6 +354,11 @@ def run_pg_backup(
 
     logger.info(f"Starting PostgreSQL backup to S3: {bucket}/{prefix}")
 
+    # Setup Kubernetes credentials (use in-cluster config if not provided)
+    if kubernetes_credentials is None:
+        logger.info("No credentials provided, using in-cluster Kubernetes config")
+        kubernetes_credentials = KubernetesCredentials()
+
     # Create and run the Kubernetes job
     job = KubernetesJob(
         v1_job=job_manifest,
