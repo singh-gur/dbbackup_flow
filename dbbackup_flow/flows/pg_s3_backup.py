@@ -173,6 +173,7 @@ def build_job_manifest(
     env_vars: list[dict[str, str]],
     backoff_limit: int,
     ttl_seconds_after_finished: int,
+    namespace: str,
 ) -> dict[str, Any]:
     """Build Kubernetes Job manifest.
 
@@ -184,6 +185,7 @@ def build_job_manifest(
         env_vars: Environment variables for the container
         backoff_limit: Job backoff limit
         ttl_seconds_after_finished: Job TTL after completion
+        namespace: Kubernetes namespace for the job
 
     Returns:
         Kubernetes Job manifest dict
@@ -193,6 +195,7 @@ def build_job_manifest(
         "kind": "Job",
         "metadata": {
             "name": job_name,
+            "namespace": namespace,
             "labels": {
                 "app": APP_LABEL,
                 "prefect-flow": FLOW_LABEL,
@@ -350,6 +353,7 @@ def run_pg_backup(
         env_vars=env_vars,
         backoff_limit=backoff_limit,
         ttl_seconds_after_finished=ttl_seconds_after_finished,
+        namespace=namespace,
     )
 
     logger.info(f"Starting PostgreSQL backup to S3: {bucket}/{prefix}")
