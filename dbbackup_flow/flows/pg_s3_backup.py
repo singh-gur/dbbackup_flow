@@ -272,7 +272,7 @@ def run_pg_backup(
         Secret(value="your-secret-key").save("aws-secret-key", overwrite=True)
 
     Args:
-        namespace: Kubernetes namespace to run the job in (default: default)
+        namespace: Kubernetes namespace to run the job in (default: prefect)
         kubernetes_credentials: KubernetesCredentials block to use. If None,
             uses in-cluster config.
         image: Docker image to run for backup
