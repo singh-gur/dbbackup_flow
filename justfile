@@ -51,6 +51,10 @@ register-blocks:
 set-var name value:
     .venv/bin/prefect variable set "{{ name }}" "{{ value }}"
 
+# Usage: just set-var pg_backup_bucket my-bucket
+set-var-overwrite name value:
+    .venv/bin/prefect variable set --overwrite "{{ name }}" "{{ value }}"
+
 # Set a Secret block (sensitive)
 
 # Usage: just set-secret PG_PASSWORD my-secret-value

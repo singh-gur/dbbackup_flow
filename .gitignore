@@ -92,3 +92,4 @@ wheels/
 *.tmp
 *.bak
 *~
+.ignore

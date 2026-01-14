@@ -10,9 +10,39 @@ from prefect.variables import Variable
 from prefect_kubernetes.credentials import KubernetesCredentials
 from prefect_kubernetes.jobs import KubernetesJob
 
+# Constants
+JOB_NAME_PREFIX = "pg-s3-backup"
+APP_LABEL = "pg-s3-backup"
+FLOW_LABEL = "pg-s3-backup"
+CONTAINER_NAME = "pg-s3-backup"
+BACKUP_COMMAND = "/app/pg_s3_backup"
+
+# Secret names
+SECRET_PG_PASSWORD = "pg-password"
+SECRET_AWS_ACCESS_KEY = "aws-access-key"
+SECRET_AWS_SECRET_KEY = "aws-secret-key"
+
+# Variable names
+VAR_BUCKET = "pg_backup_bucket"
+VAR_PREFIX = "pg_backup_prefix"
+VAR_HOST = "pg_backup_host"
+VAR_DBNAME = "pg_backup_dbname"
+VAR_USER = "pg_backup_user"
+VAR_AWS_REGION = "pg_backup_aws_region"
+
 
 def load_secret_value(name: str) -> str:
-    """Load a Prefect Secret block value."""
+    """Load a Prefect Secret block value.
+
+    Args:
+        name: Name of the Prefect Secret block
+
+    Returns:
+        Secret value as string
+
+    Raises:
+        ObjectNotFound: If secret block doesn't exist
+    """
     try:
         secret_block = Secret.load(name)
     except ObjectNotFound as exc:
@@ -25,8 +55,165 @@ def load_secret_value(name: str) -> str:
     return secret_block.get()
 
 
+def load_config_value(var_name: str, default: Any) -> Any:
+    """Load configuration from Prefect Variable with fallback to default.
+
+    Args:
+        var_name: Name of the Prefect Variable
+        default: Default value if variable not found
+
+    Returns:
+        Variable value or default
+    """
+    return Variable.get(name=var_name, default=default)
+
+
+def build_command_args(
+    host: str,
+    port: int,
+    dbname: str,
+    user: str,
+    bucket: str,
+    aws_profile: str,
+    aws_region: str,
+    backup_all: bool,
+    prefix: str,
+    aws_endpoint_url: str | None,
+    compress: bool,
+    keep_local: bool,
+) -> list[str]:
+    """Build command arguments for pg-s3-backup container.
+
+    Args:
+        host: PostgreSQL host
+        port: PostgreSQL port
+        dbname: Database name
+        user: Database user
+        bucket: S3 bucket name
+        aws_profile: AWS profile
+        aws_region: AWS region
+        backup_all: Backup all databases flag
+        prefix: S3 prefix
+        aws_endpoint_url: Custom AWS endpoint URL
+        compress: Enable compression flag
+        keep_local: Keep local backup flag
+
+    Returns:
+        List of command arguments
+    """
+    # Required arguments
+    cmd = [
+        "--host",
+        host,
+        "--port",
+        str(port),
+        "--dbname",
+        dbname,
+        "--user",
+        user,
+        "--bucket",
+        bucket,
+        "--aws-profile",
+        aws_profile,
+        "--aws-region",
+        aws_region,
+    ]
+
+    # Optional flags and arguments
+    optional_args = [
+        (backup_all, ["--all"]),
+        (prefix, ["--prefix", prefix]),
+        (aws_endpoint_url, ["--aws-endpoint-url", aws_endpoint_url]),
+        (compress, ["--compress"]),
+        (keep_local, ["--keep-local"]),
+    ]
+
+    for condition, args in optional_args:
+        if condition:
+            cmd.extend(args)
+
+    return cmd
+
+
+def build_env_vars(
+    pg_password: str,
+    aws_access_key: str,
+    aws_secret_key: str,
+) -> list[dict[str, str]]:
+    """Build environment variables for the container.
+
+    Args:
+        pg_password: PostgreSQL password
+        aws_access_key: AWS access key ID
+        aws_secret_key: AWS secret access key
+
+    Returns:
+        List of environment variable dicts
+    """
+    return [
+        {"name": "PGPASSWORD", "value": pg_password},
+        {"name": "AWS_ACCESS_KEY_ID", "value": aws_access_key},
+        {"name": "AWS_SECRET_ACCESS_KEY", "value": aws_secret_key},
+    ]
+
+
+def build_job_manifest(
+    job_name: str,
+    image: str,
+    image_pull_policy: str,
+    command_args: list[str],
+    env_vars: list[dict[str, str]],
+    backoff_limit: int,
+    ttl_seconds_after_finished: int,
+) -> dict[str, Any]:
+    """Build Kubernetes Job manifest.
+
+    Args:
+        job_name: Name for the Kubernetes Job
+        image: Docker image to use
+        image_pull_policy: Image pull policy
+        command_args: Command arguments for the container
+        env_vars: Environment variables for the container
+        backoff_limit: Job backoff limit
+        ttl_seconds_after_finished: Job TTL after completion
+
+    Returns:
+        Kubernetes Job manifest dict
+    """
+    return {
+        "apiVersion": "batch/v1",
+        "kind": "Job",
+        "metadata": {
+            "name": job_name,
+            "labels": {
+                "app": APP_LABEL,
+                "prefect-flow": FLOW_LABEL,
+            },
+        },
+        "spec": {
+            "backoffLimit": backoff_limit,
+            "ttlSecondsAfterFinished": ttl_seconds_after_finished,
+            "template": {
+                "spec": {
+                    "restartPolicy": "Never",
+                    "containers": [
+                        {
+                            "name": CONTAINER_NAME,
+                            "image": image,
+                            "imagePullPolicy": image_pull_policy,
+                            "command": [BACKUP_COMMAND],
+                            "args": command_args,
+                            "env": env_vars,
+                        }
+                    ],
+                }
+            },
+        },
+    }
+
+
 @flow(
-    name="pg-s3-backup",
+    name=JOB_NAME_PREFIX,
     description="Run pg-s3-backup Docker container as Kubernetes Job to backup PostgreSQL to S3",
 )
 def run_pg_backup(
@@ -102,102 +289,65 @@ def run_pg_backup(
     """
     logger = get_run_logger()
 
-    # Get values from Prefect Variables (with fallback to parameters)
-    bucket = Variable.get(name="pg_backup_bucket", default=bucket)
-    prefix = Variable.get(name="pg_backup_prefix", default=prefix)
-    host = Variable.get(name="pg_backup_host", default=host)
-    dbname = Variable.get(name="pg_backup_dbname", default=dbname)
-    user = Variable.get(name="pg_backup_user", default=user)
-    aws_region = Variable.get(name="pg_backup_aws_region", default=aws_region)
+    # Load configuration from Prefect Variables (with fallback to parameters)
+    bucket = load_config_value(VAR_BUCKET, bucket)
+    prefix = load_config_value(VAR_PREFIX, prefix)
+    host = load_config_value(VAR_HOST, host)
+    dbname = load_config_value(VAR_DBNAME, dbname)
+    user = load_config_value(VAR_USER, user)
+    aws_region = load_config_value(VAR_AWS_REGION, aws_region)
 
-    # Get secrets from Prefect Secret blocks
-    password = load_secret_value("pg-password")
-    aws_access_key = load_secret_value("aws-access-key")
-    aws_secret = load_secret_value("aws-secret-key")
+    # Load secrets from Prefect Secret blocks
+    pg_password = load_secret_value(SECRET_PG_PASSWORD)
+    aws_access_key = load_secret_value(SECRET_AWS_ACCESS_KEY)
+    aws_secret_key = load_secret_value(SECRET_AWS_SECRET_KEY)
 
     # Build command arguments
-    cmd = [
-        "--host",
-        host,
-        "--port",
-        str(port),
-        "--dbname",
-        dbname,
-        "--user",
-        user,
-        "--bucket",
-        bucket,
-        "--aws-profile",
-        aws_profile,
-        "--aws-region",
-        aws_region,
-    ]
+    command_args = build_command_args(
+        host=host,
+        port=port,
+        dbname=dbname,
+        user=user,
+        bucket=bucket,
+        aws_profile=aws_profile,
+        aws_region=aws_region,
+        backup_all=backup_all,
+        prefix=prefix,
+        aws_endpoint_url=aws_endpoint_url,
+        compress=compress,
+        keep_local=keep_local,
+    )
 
-    if backup_all:
-        cmd.append("--all")
+    # Build environment variables
+    env_vars = build_env_vars(
+        pg_password=pg_password,
+        aws_access_key=aws_access_key,
+        aws_secret_key=aws_secret_key,
+    )
 
-    if prefix:
-        cmd.extend(["--prefix", prefix])
-
-    if aws_endpoint_url:
-        cmd.extend(["--aws-endpoint-url", aws_endpoint_url])
-
-    if compress:
-        cmd.append("--compress")
-
-    if keep_local:
-        cmd.append("--keep-local")
-
-    # Build environment variables with secrets
-    env: list[dict[str, Any]] = [
-        {"name": "PGPASSWORD", "value": password},
-        {"name": "AWS_ACCESS_KEY_ID", "value": aws_access_key},
-        {"name": "AWS_SECRET_ACCESS_KEY", "value": aws_secret},
-    ]
-
+    # Generate unique job name
     flow_run_id = flow_run.id
     job_suffix = flow_run_id[:8] if flow_run_id else "manual"
-    job_name = f"pg-s3-backup-{job_suffix}"
+    job_name = f"{JOB_NAME_PREFIX}-{job_suffix}"
 
     # Build Kubernetes Job manifest
-    job_manifest = {
-        "apiVersion": "batch/v1",
-        "kind": "Job",
-        "metadata": {
-            "name": job_name,
-            "labels": {
-                "app": "pg-s3-backup",
-                "prefect-flow": "pg-s3-backup",
-            },
-        },
-        "spec": {
-            "backoffLimit": backoff_limit,
-            "ttlSecondsAfterFinished": ttl_seconds_after_finished,
-            "template": {
-                "spec": {
-                    "restartPolicy": "Never",
-                    "containers": [
-                        {
-                            "name": "pg-s3-backup",
-                            "image": image,
-                            "imagePullPolicy": image_pull_policy,
-                            "command": ["/app/pg_s3_backup"],
-                            "args": cmd,
-                            "env": env,
-                        }
-                    ],
-                }
-            },
-        },
-    }
+    job_manifest = build_job_manifest(
+        job_name=job_name,
+        image=image,
+        image_pull_policy=image_pull_policy,
+        command_args=command_args,
+        env_vars=env_vars,
+        backoff_limit=backoff_limit,
+        ttl_seconds_after_finished=ttl_seconds_after_finished,
+    )
 
     logger.info(f"Starting PostgreSQL backup to S3: {bucket}/{prefix}")
 
-    # Create and run the job
+    # Create and run the Kubernetes job
     job = KubernetesJob(
         v1_job=job_manifest,
         namespace=namespace,
-        kubernetes_credentials=kubernetes_credentials,
+        credentials=kubernetes_credentials,
         delete_after_completion=True,
         timeout_seconds=600,
     )
@@ -207,6 +357,8 @@ def run_pg_backup(
     logs = job_run.fetch_result() if include_logs else None
 
     logger.info("Backup completed successfully")
+
+    # Build response
     response = {
         "success": result,
         "bucket": bucket,
