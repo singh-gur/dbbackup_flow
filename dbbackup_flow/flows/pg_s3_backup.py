@@ -3,8 +3,6 @@
 from typing import Any
 
 from prefect import flow, get_run_logger
-from prefect.blocks.system import Secret
-from prefect.exceptions import ObjectNotFound
 from prefect.runtime import flow_run
 from prefect.variables import Variable
 from prefect_kubernetes.credentials import KubernetesCredentials
@@ -17,11 +15,6 @@ FLOW_LABEL = "pg-s3-backup"
 CONTAINER_NAME = "pg-s3-backup"
 BACKUP_COMMAND = "/app/pg_s3_backup"
 
-# Secret names
-SECRET_PG_PASSWORD = "pg-password"
-SECRET_AWS_ACCESS_KEY = "aws-access-key"
-SECRET_AWS_SECRET_KEY = "aws-secret-key"
-
 # Variable names
 VAR_BUCKET = "pg_backup_bucket"
 VAR_PREFIX = "pg_backup_prefix"
@@ -30,30 +23,6 @@ VAR_DBNAME = "pg_backup_dbname"
 VAR_USER = "pg_backup_user"
 VAR_AWS_REGION = "pg_backup_aws_region"
 VAR_AWS_ENDPOINT_URL = "pg_backup_aws_endpoint_url"
-
-
-def load_secret_value(name: str) -> str:
-    """Load a Prefect Secret block value.
-
-    Args:
-        name: Name of the Prefect Secret block
-
-    Returns:
-        Secret value as string
-
-    Raises:
-        ObjectNotFound: If secret block doesn't exist
-    """
-    try:
-        secret_block = Secret.load(name)
-    except ObjectNotFound as exc:
-        raise ObjectNotFound(
-            Exception(
-                f"Prefect Secret block '{name}' not found. Create it before running the flow."
-            )
-        ) from exc
-
-    return secret_block.get()
 
 
 def load_config_value(var_name: str, default: Any) -> Any:
@@ -137,26 +106,46 @@ def build_command_args(
 
 
 def build_env_vars(
-    pg_password: str,
-    aws_access_key: str,
-    aws_secret_key: str,
+    k8s_secret_name: str,
     aws_endpoint_url: str | None = None,
-) -> list[dict[str, str]]:
-    """Build environment variables for the container.
+) -> list[dict[str, Any]]:
+    """Build environment variables for the container using Kubernetes Secret references.
 
     Args:
-        pg_password: PostgreSQL password
-        aws_access_key: AWS access key ID
-        aws_secret_key: AWS secret access key
+        k8s_secret_name: Name of the Kubernetes Secret containing credentials
         aws_endpoint_url: Custom AWS endpoint URL (optional)
 
     Returns:
-        List of environment variable dicts
+        List of environment variable dicts with secret references
     """
     env_vars = [
-        {"name": "PGPASSWORD", "value": pg_password},
-        {"name": "AWS_ACCESS_KEY_ID", "value": aws_access_key},
-        {"name": "AWS_SECRET_ACCESS_KEY", "value": aws_secret_key},
+        {
+            "name": "PGPASSWORD",
+            "valueFrom": {
+                "secretKeyRef": {
+                    "name": k8s_secret_name,
+                    "key": "pg-password",
+                }
+            },
+        },
+        {
+            "name": "AWS_ACCESS_KEY_ID",
+            "valueFrom": {
+                "secretKeyRef": {
+                    "name": k8s_secret_name,
+                    "key": "aws-access-key",
+                }
+            },
+        },
+        {
+            "name": "AWS_SECRET_ACCESS_KEY",
+            "valueFrom": {
+                "secretKeyRef": {
+                    "name": k8s_secret_name,
+                    "key": "aws-secret-key",
+                }
+            },
+        },
     ]
 
     if aws_endpoint_url:
@@ -238,6 +227,7 @@ def run_pg_backup(
     # Kubernetes options
     namespace: str = "prefect",
     kubernetes_credentials: KubernetesCredentials | None = None,
+    k8s_secret_name: str = "pg-backup-secrets",
     # Docker image
     image: str = "regv2.gsingh.io/personal/pg-s3-backup:latest",
     image_pull_policy: str = "Always",
@@ -276,16 +266,18 @@ def run_pg_backup(
         prefect variable set pg_backup_aws_region "us-east-1" --prod
         prefect variable set pg_backup_aws_endpoint_url "https://s3.custom.com" --prod
 
-        # Sensitive Secrets (create via Prefect UI or CLI):
-        from prefect.blocks.system import Secret
-        Secret(value="your-password").save("pg-password", overwrite=True)
-        Secret(value="your-access-key").save("aws-access-key", overwrite=True)
-        Secret(value="your-secret-key").save("aws-secret-key", overwrite=True)
+        # Kubernetes Secret (create in the namespace):
+        kubectl create secret generic pg-backup-secrets \
+          --from-literal=pg-password='your-db-password' \
+          --from-literal=aws-access-key='your-access-key' \
+          --from-literal=aws-secret-key='your-secret-key' \
+          --namespace=prefect
 
     Args:
         namespace: Kubernetes namespace to run the job in (default: prefect)
         kubernetes_credentials: KubernetesCredentials block to use. If None,
             uses in-cluster config.
+        k8s_secret_name: Name of Kubernetes Secret containing credentials
         image: Docker image to run for backup
         image_pull_policy: Docker image pull policy
         image_pull_secret: Name of Kubernetes secret for pulling private images
@@ -319,11 +311,6 @@ def run_pg_backup(
     aws_region = load_config_value(VAR_AWS_REGION, aws_region)
     aws_endpoint_url = load_config_value(VAR_AWS_ENDPOINT_URL, aws_endpoint_url)
 
-    # Load secrets from Prefect Secret blocks
-    pg_password = load_secret_value(SECRET_PG_PASSWORD)
-    aws_access_key = load_secret_value(SECRET_AWS_ACCESS_KEY)
-    aws_secret_key = load_secret_value(SECRET_AWS_SECRET_KEY)
-
     # Build command arguments
     command_args = build_command_args(
         host=host,
@@ -340,11 +327,9 @@ def run_pg_backup(
         keep_local=keep_local,
     )
 
-    # Build environment variables
+    # Build environment variables with Kubernetes Secret references
     env_vars = build_env_vars(
-        pg_password=pg_password,
-        aws_access_key=aws_access_key,
-        aws_secret_key=aws_secret_key,
+        k8s_secret_name=k8s_secret_name,
         aws_endpoint_url=aws_endpoint_url,
     )
 

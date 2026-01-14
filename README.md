@@ -33,22 +33,22 @@ See [k8s/README.md](k8s/README.md) for detailed documentation.
 
 ### Quick Setup
 
-Use the provided setup script to interactively configure all variables and secrets:
+#### 1. Create Kubernetes Secret
+
+Use the provided script to securely create a Kubernetes Secret for credentials:
 
 ```bash
-./setup_secrets.sh
+./scripts/create-k8s-secret.sh
 ```
 
 The script will prompt you for:
-- PostgreSQL host, database, user
-- S3 bucket name and prefix
-- AWS region
 - PostgreSQL password (hidden input)
-- AWS credentials (hidden input)
+- AWS access key (hidden input)
+- AWS secret key (hidden input)
 
-### Manual Setup
+This creates a secret named `pg-backup-secrets` in the `prefect` namespace.
 
-#### Set Variables (non-sensitive)
+#### 2. Set Prefect Variables (non-sensitive configuration)
 
 ```bash
 just set-var pg_backup_bucket my-backups
@@ -60,13 +60,19 @@ just set-var pg_backup_aws_region us-east-1
 just set-var pg_backup_aws_endpoint_url https://s3.custom.com  # Optional: for S3-compatible services
 ```
 
-#### Set Secret Blocks (sensitive)
+### Manual Setup
+
+#### Create Kubernetes Secret
 
 ```bash
-just set-secret pg-password "your-password"
-just set-secret aws-access-key "your-access-key-id"
-just set-secret aws-secret-key "your-secret-access-key"
+kubectl create secret generic pg-backup-secrets \
+  --from-literal=pg-password='your-db-password' \
+  --from-literal=aws-access-key='your-access-key' \
+  --from-literal=aws-secret-key='your-secret-key' \
+  --namespace=prefect
 ```
+
+**Security Note:** Secrets are securely referenced in the Kubernetes Job manifest using `secretKeyRef`. They are never exposed as plain text in environment variables or logged.
 
 ## Deploy
 

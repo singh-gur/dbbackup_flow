@@ -129,10 +129,11 @@ just status
   - The `pip_install_requirements` step does NOT work with Kubernetes work pools
 
 ### Secrets Management
-- Store sensitive data in **Prefect Secret Blocks** (`Secret.load("name").get()`)
-- Use `Secret.save(value, overwrite=True)` to create/update
+- **IMPORTANT**: Store sensitive credentials in **Kubernetes Secrets**, not Prefect Secret Blocks
+- Reference secrets in pod specs using `secretKeyRef` (never as plain environment variables)
+- Secrets are injected at runtime by Kubernetes, keeping them secure
 - Never commit secrets to version control
-- Use `.env` files locally (gitignored)
+- Use `./scripts/create-k8s-secret.sh` to create secrets securely
 
 ### Configuration
 - Store non-sensitive config in **Prefect Variables**: `Variable.get(name="key", default=fallback)`
