@@ -40,6 +40,7 @@ deployments:
     entrypoint: dbbackup_flow.flows.pg_s3_backup:run_pg_backup
     parameters:
       namespace: "prefect" # Run jobs in the same namespace as the worker
+      image_pull_secret: "regv2-secret" # Name of your image pull secret
     work_pool:
       name: kubernetes
       work_queue_name: null

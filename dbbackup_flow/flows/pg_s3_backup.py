@@ -174,6 +174,7 @@ def build_job_manifest(
     backoff_limit: int,
     ttl_seconds_after_finished: int,
     namespace: str,
+    image_pull_secret: str | None = None,
 ) -> dict[str, Any]:
     """Build Kubernetes Job manifest.
 
@@ -186,10 +187,28 @@ def build_job_manifest(
         backoff_limit: Job backoff limit
         ttl_seconds_after_finished: Job TTL after completion
         namespace: Kubernetes namespace for the job
+        image_pull_secret: Name of image pull secret (optional)
 
     Returns:
         Kubernetes Job manifest dict
     """
+    pod_spec = {
+        "restartPolicy": "Never",
+        "containers": [
+            {
+                "name": CONTAINER_NAME,
+                "image": image,
+                "imagePullPolicy": image_pull_policy,
+                "command": [BACKUP_COMMAND],
+                "args": command_args,
+                "env": env_vars,
+            }
+        ],
+    }
+
+    if image_pull_secret:
+        pod_spec["imagePullSecrets"] = [{"name": image_pull_secret}]
+
     return {
         "apiVersion": "batch/v1",
         "kind": "Job",
@@ -205,19 +224,7 @@ def build_job_manifest(
             "backoffLimit": backoff_limit,
             "ttlSecondsAfterFinished": ttl_seconds_after_finished,
             "template": {
-                "spec": {
-                    "restartPolicy": "Never",
-                    "containers": [
-                        {
-                            "name": CONTAINER_NAME,
-                            "image": image,
-                            "imagePullPolicy": image_pull_policy,
-                            "command": [BACKUP_COMMAND],
-                            "args": command_args,
-                            "env": env_vars,
-                        }
-                    ],
-                }
+                "spec": pod_spec,
             },
         },
     }
@@ -234,6 +241,7 @@ def run_pg_backup(
     # Docker image
     image: str = "regv2.gsingh.io/personal/pg-s3-backup:latest",
     image_pull_policy: str = "Always",
+    image_pull_secret: str | None = None,
     # PostgreSQL connection options
     host: str = "localhost",
     port: int = 5432,
@@ -280,6 +288,7 @@ def run_pg_backup(
             uses in-cluster config.
         image: Docker image to run for backup
         image_pull_policy: Docker image pull policy
+        image_pull_secret: Name of Kubernetes secret for pulling private images
         host: Hostname of the postgres server (default: localhost)
         port: Port of the postgres server (default: 5432)
         dbname: Name of the database to backup (default: postgres)
@@ -354,6 +363,7 @@ def run_pg_backup(
         backoff_limit=backoff_limit,
         ttl_seconds_after_finished=ttl_seconds_after_finished,
         namespace=namespace,
+        image_pull_secret=image_pull_secret,
     )
 
     logger.info(f"Starting PostgreSQL backup to S3: {bucket}/{prefix}")
