@@ -72,7 +72,7 @@ kubectl create secret generic pg-backup-secrets \
   --namespace=prefect
 ```
 
-**Security Note:** Secrets are securely referenced in the Kubernetes Job manifest using `secretKeyRef`. They are never exposed as plain text in environment variables or logged.
+**Security Note:** Secrets are securely referenced in the Kubernetes Job manifest using `secretKeyRef` and passed to the container as environment variables. The CLI arguments reference these environment variables (e.g., `--password "$PGPASSWORD"`), ensuring secrets are never exposed in the manifest YAML or command arguments.
 
 ## Deploy
 

@@ -38,7 +38,7 @@ def load_config_value(var_name: str, default: Any) -> Any:
     return Variable.get(name=var_name, default=default)
 
 
-def build_command_args(
+def build_command_string(
     host: str,
     port: int,
     dbname: str,
@@ -51,8 +51,8 @@ def build_command_args(
     aws_endpoint_url: str | None,
     compress: bool,
     keep_local: bool,
-) -> list[str]:
-    """Build command arguments for pg-s3-backup container.
+) -> str:
+    """Build command string for pg-s3-backup container with env var references.
 
     Args:
         host: PostgreSQL host
@@ -69,56 +69,63 @@ def build_command_args(
         keep_local: Keep local backup flag
 
     Returns:
-        List of command arguments
+        Command string with environment variable references
     """
-    # Required arguments
-    cmd = [
+    # Build command with environment variable references for secrets
+    # Use quoted strings to handle spaces/special chars
+    cmd_parts = [
+        "/app/pg_s3_backup",
         "--host",
-        host,
+        f'"{host}"',
         "--port",
         str(port),
         "--dbname",
-        dbname,
+        f'"{dbname}"',
         "--user",
-        user,
+        f'"{user}"',
+        "--password",
+        '"$PGPASSWORD"',
         "--bucket",
-        bucket,
-        "--aws-profile",
-        aws_profile,
+        f'"{bucket}"',
+        "--aws-access-key-id",
+        '"$AWS_ACCESS_KEY_ID"',
+        "--aws-secret-key",
+        '"$AWS_SECRET_ACCESS_KEY"',
         "--aws-region",
-        aws_region,
+        f'"{aws_region}"',
     ]
 
     # Optional flags and arguments
-    optional_args = [
-        (backup_all, ["--all"]),
-        (prefix, ["--prefix", prefix]),
-        (aws_endpoint_url, ["--aws-endpoint-url", aws_endpoint_url]),
-        (compress, ["--compress"]),
-        (keep_local, ["--keep-local"]),
-    ]
+    if backup_all:
+        cmd_parts.append("--all")
 
-    for condition, args in optional_args:
-        if condition:
-            cmd.extend(args)
+    if prefix:
+        cmd_parts.extend(["--prefix", f'"{prefix}"'])
 
-    return cmd
+    if aws_endpoint_url:
+        cmd_parts.extend(["--aws-endpoint-url", f'"{aws_endpoint_url}"'])
+
+    if compress:
+        cmd_parts.append("--compress")
+
+    if keep_local:
+        cmd_parts.append("--keep-local")
+
+    return " ".join(cmd_parts)
 
 
 def build_env_vars(
     k8s_secret_name: str,
-    aws_endpoint_url: str | None = None,
 ) -> list[dict[str, Any]]:
     """Build environment variables for the container using Kubernetes Secret references.
 
     Args:
         k8s_secret_name: Name of the Kubernetes Secret containing credentials
-        aws_endpoint_url: Custom AWS endpoint URL (optional)
 
     Returns:
         List of environment variable dicts with secret references
     """
-    env_vars = [
+    return [
         {
             "name": "PGPASSWORD",
             "valueFrom": {
@@ -148,18 +155,13 @@ def build_env_vars(
         },
     ]
 
-    if aws_endpoint_url:
-        env_vars.append({"name": "AWS_ENDPOINT_URL", "value": aws_endpoint_url})
-
-    return env_vars
-
 
 def build_job_manifest(
     job_name: str,
     image: str,
     image_pull_policy: str,
-    command_args: list[str],
-    env_vars: list[dict[str, str]],
+    command_string: str,
+    env_vars: list[dict[str, Any]],
     backoff_limit: int,
     ttl_seconds_after_finished: int,
     namespace: str,
@@ -171,7 +173,7 @@ def build_job_manifest(
         job_name: Name for the Kubernetes Job
         image: Docker image to use
         image_pull_policy: Image pull policy
-        command_args: Command arguments for the container
+        command_string: Command string with env var references
         env_vars: Environment variables for the container
         backoff_limit: Job backoff limit
         ttl_seconds_after_finished: Job TTL after completion
@@ -188,8 +190,8 @@ def build_job_manifest(
                 "name": CONTAINER_NAME,
                 "image": image,
                 "imagePullPolicy": image_pull_policy,
-                "command": [BACKUP_COMMAND],
-                "args": command_args,
+                "command": ["/bin/sh", "-c"],
+                "args": [command_string],
                 "env": env_vars,
             }
         ],
@@ -311,8 +313,8 @@ def run_pg_backup(
     aws_region = load_config_value(VAR_AWS_REGION, aws_region)
     aws_endpoint_url = load_config_value(VAR_AWS_ENDPOINT_URL, aws_endpoint_url)
 
-    # Build command arguments
-    command_args = build_command_args(
+    # Build command string with env var references
+    command_string = build_command_string(
         host=host,
         port=port,
         dbname=dbname,
@@ -330,7 +332,6 @@ def run_pg_backup(
     # Build environment variables with Kubernetes Secret references
     env_vars = build_env_vars(
         k8s_secret_name=k8s_secret_name,
-        aws_endpoint_url=aws_endpoint_url,
     )
 
     # Generate unique job name
@@ -343,7 +344,7 @@ def run_pg_backup(
         job_name=job_name,
         image=image,
         image_pull_policy=image_pull_policy,
-        command_args=command_args,
+        command_string=command_string,
         env_vars=env_vars,
         backoff_limit=backoff_limit,
         ttl_seconds_after_finished=ttl_seconds_after_finished,
