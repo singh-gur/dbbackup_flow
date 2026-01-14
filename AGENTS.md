@@ -10,6 +10,7 @@ A Prefect flow that runs `pg-s3-backup` Docker container as a Kubernetes Job to 
 - Prefect 3.x for workflow orchestration
 - `prefect-kubernetes` for Kubernetes Job management
 - `uv` for package management
+- Python 3.12+
 
 ## Build Commands
 
@@ -23,28 +24,47 @@ uv add package-name
 # Remove dependency
 uv remove package-name
 
+# Generate requirements.txt (for Prefect deployments)
+just reqs
+
 # Deploy to Prefect server
 just deploy
 just deploy-scheduled  # With daily 2am cron schedule
 
 # Set configuration
 just set-var pg_backup_bucket my-bucket
-just set-secret PG_PASSWORD secret-value
-just set-secret AWS_ACCESS_KEY_ID key
-just set-secret AWS_SECRET_ACCESS_KEY secret
+just set-secret pg-password secret-value
+just set-secret aws-access-key key-id
+just set-secret aws-secret-key secret-key
 
-# List Prefect variables
+# List Prefect variables and blocks
 just list-vars
+just list-secrets
 ```
 
 ## Linting & Formatting
 
 ```bash
-# Check syntax
-python -m py_compile main.py
+# Run Ruff linter (check only)
+.venv/bin/ruff check .
+
+# Run Ruff formatter (check only)
+.venv/bin/ruff format --check .
+
+# Auto-fix linting issues
+.venv/bin/ruff check --fix .
+
+# Auto-format code
+.venv/bin/ruff format .
+
+# Run type checker (basedpyright)
+.venv/bin/basedpyright
+
+# Check syntax of a single file
+python -m py_compile dbbackup_flow/flows/pg_s3_backup.py
 
 # Verify imports work
-.venv/bin/python -c "from module import name"
+.venv/bin/python -c "from dbbackup_flow import run_pg_backup"
 
 # Justfile syntax check
 just --list
@@ -53,12 +73,21 @@ just --list
 ## Testing
 
 ```bash
-# Run a test flow locally (requires Prefect server access)
+# No unit tests currently - this is an integration-focused project
+
+# Run flow locally (requires Prefect server access)
 just run-local run_pg_backup
 
 # Deploy and trigger manually
 just deploy-scheduled
 just trigger pg-s3-backup
+
+# View deployment info
+just list-deployments
+just info pg-s3-backup
+
+# Check Prefect status
+just status
 ```
 
 ## Code Style Guidelines
