@@ -19,12 +19,13 @@ pull:
       repository: "https://github.com/singh-gur/dbbackup_flow.git"
       branch: "main"
       access_token: "{{ prefect.blocks.github-credentials.github-ro.token }}"
-  - prefect.deployments.steps.pip_install_requirements:
+  # - prefect.deployments.steps.pip_install_requirements:
+  #     id: install_requirements_step
+  #     requirements_file: "{{ clone_step.directory }}/requirements.txt"
+  - prefect.deployments.steps.run_shell_script:
       id: install_requirements_step
-      requirements_file: "{{ clone_step.directory }}/requirements.txt"
-  # - prefect.deployments.steps.run_shell_script:
-  #     script: pip install prefect-kubernetes==0.7.2
-  #     stream_output: true
+      script: "pip install {{ clone_step.directory }}/."
+      stream_output: true
 
 # the deployments section allows you to provide configuration for deploying flows
 deployments:
@@ -38,7 +39,7 @@ deployments:
     flow_name: pg_s3_backup
     entrypoint: dbbackup_flow.flows.pg_s3_backup:run_pg_backup
     parameters:
-      namespace: "prefect"  # Run jobs in the same namespace as the worker
+      namespace: "prefect" # Run jobs in the same namespace as the worker
     work_pool:
       name: kubernetes
       work_queue_name: null
